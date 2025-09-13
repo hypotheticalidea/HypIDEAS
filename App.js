@@ -1,20 +1,44 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import './src/utils/polyfills'; // Import polyfills first
+import { AuthProvider } from './src/context/AuthContext';
+import { useAuth } from './src/hooks/useAuth';
+import LoadingScreen from './src/components/common/LoadingScreen';
+import AuthNavigator from './src/navigation/AuthNavigator';
+import MainNavigator from './src/navigation/MainNavigator';
+import { testConnection } from './src/services/supabase/client';
+import { createSampleData } from './src/utils/sampleData';
 
-export default function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  React.useEffect(() => {
+    const initializeApp = async () => {
+      await testConnection();
+      if (user) {
+        // Create sample data for new users
+        await createSampleData();
+      }
+    };
+    
+    initializeApp();
+  }, [user]);
+
+  if (loading) {
+    return <LoadingScreen message="Initializing HypIDEAS..." />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      {user ? <MainNavigator /> : <AuthNavigator />}
+    </NavigationContainer>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
